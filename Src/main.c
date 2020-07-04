@@ -22,9 +22,12 @@
 #include "main.h"
 #include "fatfs.h"
 #include "usb_device.h"
+#include <stdarg.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+
+#include "uds.h"
 
 /* USER CODE END Includes */
 
@@ -49,6 +52,14 @@ SPI_HandleTypeDef hspi1;
 
 /* USER CODE BEGIN PV */
 
+DiagnosticShims shims;
+CAN_HandleTypeDef CanHandle;
+CAN_TxHeaderTypeDef TxHeader;
+CAN_RxHeaderTypeDef RxHeader;
+uint8_t TxData[8];
+uint8_t RxData[8];
+uint32_t TxMailbox;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -62,6 +73,33 @@ static void MX_SPI1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+/** overwriten write function for swd debugging */
+int _write(int file, char *ptr, int len)
+{
+  for (size_t i = 0; i < len; i++)
+    ITM_SendChar((*ptr++));
+  return len;
+}
+
+static bool UDS_Send_Can(const uint32_t arbitration_id, const uint8_t *data, const uint8_t size)
+{
+  return false;
+}
+
+static void UDS_Debug(const char *format, ...)
+{
+  va_list args;
+  va_start(args, format);
+  vprintf(format, args);
+  printf("\r\n");
+  va_end(args);
+}
+
+static void UDS_Init()
+{
+  shims = diagnostic_init_shims(UDS_Debug, UDS_Send_Can, NULL);
+}
 
 /* USER CODE END 0 */
 
@@ -98,7 +136,7 @@ int main(void)
   MX_FATFS_Init();
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
-
+  UDS_Init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -122,7 +160,7 @@ void SystemClock_Config(void)
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
   RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB busses clocks
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
@@ -139,10 +177,9 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /** Initializes the CPU, AHB and APB busses clocks 
+  /** Initializes the CPU, AHB and APB busses clocks
   */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
@@ -158,7 +195,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /** Configure the Systick interrupt time 
+  /** Configure the Systick interrupt time
   */
   __HAL_RCC_PLLI2S_ENABLE();
 }
@@ -197,7 +234,6 @@ static void MX_CAN1_Init(void)
   /* USER CODE BEGIN CAN1_Init 2 */
 
   /* USER CODE END CAN1_Init 2 */
-
 }
 
 /**
@@ -235,7 +271,6 @@ static void MX_SPI1_Init(void)
   /* USER CODE BEGIN SPI1_Init 2 */
 
   /* USER CODE END SPI1_Init 2 */
-
 }
 
 /**
@@ -250,7 +285,6 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
-
 }
 
 /* USER CODE BEGIN 4 */
@@ -269,7 +303,7 @@ void Error_Handler(void)
   /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.
@@ -278,7 +312,7 @@ void Error_Handler(void)
   * @retval None
   */
 void assert_failed(uint8_t *file, uint32_t line)
-{ 
+{
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */

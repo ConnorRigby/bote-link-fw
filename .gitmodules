@@ -1,0 +1,3 @@
+[submodule "Middlewares/Third_Party/uds-c"]
+	path = Middlewares/Third_Party/uds-c
+	url = https://github.com/openxc/uds-c.git
