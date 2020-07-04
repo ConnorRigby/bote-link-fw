@@ -1,0 +1,3 @@
+Drivers/* linguist-vendored
+Middlewares/* linguist-vendored
+startup_stm32f105xc.s linguist-vendored
